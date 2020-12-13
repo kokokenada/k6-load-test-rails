@@ -1,0 +1,32 @@
+{
+  "name": "typescript",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "test": "k6 run dist/main.js"
+  },
+  "dependencies": {
+    "@babel/core": "^7.10.2",
+    "@babel/plugin-proposal-class-properties": "^7.10.1",
+    "@babel/plugin-proposal-object-rest-spread": "^7.10.1",
+    "@babel/preset-env": "^7.10.2",
+    "@babel/preset-typescript": "^7.10.1",
+    "babel-loader": "^8.1.0",
+    "date-fns": "^2.16.1",
+    "faker": "^5.1.0",
+    "jsonpath-plus": "^4.0.0",
+    "typescript": "^3.9.5",
+    "uuidv4": "^6.2.6",
+    "webpack": "^4.43.0",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@types/faker": "^5.1.5",
+    "@types/k6": "^0.28.2",
+    "@types/webpack": "^4.41.17",
+    "@types/yargs": "^15.0.11",
+    "ts-node": "^9.1.1",
+    "webpack-cli": "^3.3.11"
+  }
+}

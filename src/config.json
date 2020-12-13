@@ -1,0 +1,23 @@
+{
+  "stages": [
+    {
+      "duration": "1s",
+      "target": 10
+    },
+    {
+      "duration": "360s",
+      "target": 10
+    }
+  ],
+  "insecureSkipTLSVerify": true,
+  "noConnectionReuse": false,
+  "noUsageReport": true,
+  "rps": 500,
+  "thresholds": {
+    "RTT": ["p(99)<300", "p(70)<250", "avg<200", "med<150", "min<100"],
+    "Content OK": ["rate>0.95"],
+    "ContentSize": ["value<4000"],
+    "Errors": ["count<100"],
+    "Successful Requests": ["rate<20"]
+  }
+}
