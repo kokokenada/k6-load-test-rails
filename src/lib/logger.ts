@@ -1,4 +1,3 @@
-
 export class Logger {
   public static debug(source: string, message: string, DEBUG = true) {
     if (DEBUG) {

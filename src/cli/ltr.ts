@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 import * as fs from 'fs';
 import yargs from 'yargs';
-import { Logger } from '../gql-lt-rails/Logger';
-import { GQLTestConfig, Test } from '../gql-lt-rails/test-types';
-import { TestUsers } from '../gql-lt-rails/test-users';
+import { Logger } from '../lib/Logger';
+import { TestConfig, Test } from '../lib/test-types';
+import { TestUsers } from '../lib/test-users';
 import { tests } from '../tests/tests';
 import { dryRun } from './dry-run';
 
 const DEBUG = false;
-const commandName = 'gql-lt.ts';
+const commandName = 'ltr.ts';
 
 interface Arguments {
   [x: string]: unknown;
   generateUsers?: boolean;
-  numberOf?: number;
+  numberOfUsers?: number;
+  rampRate?: number;
+  maintainMinutes?: number;
   domain?: string;
   dryRun?: boolean;
-  file?: string;
   testName?: string;
   writeConfig?: boolean;
   hosts?: string[];
@@ -26,11 +27,12 @@ const argv: Arguments = yargs
   .command('generateUsers', 'Set webhooks and other necessary config')
   .command('dryRun', 'Set webhooks and other necessary config')
   .command('writeConfig', 'Write the configuration files to the dist directory')
-  .option('f', { alias: 'file', describe: 'file to run' })
   .option('t', { alias: 'testName', describe: 'test to run' })
-  .option('n', { alias: 'numberOf', describe: 'number of user', type: 'number' })
   .option('h', { alias: 'hosts', describe: 'one or more hosts', type: 'array' })
-  .option('d', { alias: 'domain', describe: 'domain', type: 'string' }).argv;
+  .option('u', { alias: 'numberOfUsers', describe: 'number of user', type: 'number' })
+  .option('r', { alias: 'rampRate', describe: 'add new user every N seconds', type: 'number' })
+  .option('m', { alias: 'maintainMinutes', describe: 'after number of users reach - run for N minutes', type: 'number' })
+  .option('d', { alias: 'domain', describe: 'domain for generated email addressess', type: 'string' }).argv;
 
 Logger.debug(commandName, `args = ${JSON.stringify(argv, null, 2)}`, DEBUG);
 
@@ -50,19 +52,15 @@ function getTest(testName: string | undefined): Test | undefined {
 
 if (argv.generateUsers) {
   Logger.log(commandName, 'generating users');
-  const userCount = argv.numberOf || 100;
+  const userCount = argv.numberOfUsers || 100;
   const emailDomain = argv.domain || 'test.com';
   const users = TestUsers.generateUsers(userCount, emailDomain);
   console.log(JSON.stringify(users, null, 2));
 } else if (argv.writeConfig) {
-  const usersFileName = 'users.json';
   const stepsFileName = 'steps.json';
   const configFileName = 'test-config.json';
   const target = './dist/';
-  const userCount = argv.numberOf || 10;
   const emailDomain = argv.domain || 'test.com';
-  const users = TestUsers.generateUsers(userCount, emailDomain);
-  fs.writeFileSync(`${target}${usersFileName}`, JSON.stringify(users, null, 2));
 
   const test = getTest(argv.testName);
   if (!test) {
@@ -76,11 +74,13 @@ if (argv.generateUsers) {
   }
   const hosts: string[] = argv.hosts;
 
-  const config: GQLTestConfig = {
-    usersFile: `./${usersFileName}`,
+  const config: TestConfig = {
     stepsFile: `./${stepsFileName}`,
     hosts,
     emailDomain,
+    maxUsers: argv.numberOfUsers || 10,
+    durationMinutes: argv.maintainMinutes || 2,
+    rampRateSeconds: argv.rampRate || 2,
   };
   fs.writeFileSync(`${target}${configFileName}`, JSON.stringify(config, null, 2));
 } else if (argv.dryRun) {

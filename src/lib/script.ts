@@ -1,48 +1,49 @@
-import { sleep } from 'k6';
+import { sleep, check, fail } from 'k6';
 import http from 'k6/http';
+import crypto from 'k6/crypto';
 import { Counter, Rate } from 'k6/metrics';
 import { LoadTestRails } from './load-test-rails';
-import { GQLTestConfig, Test } from './test-types';
-import { User } from './test-users';
+import { TestConfig, Test } from './test-types';
+import { TestUsers, User } from './test-users';
 
 const TEST_CONFIG_FILE = './test-config.json';
 
-let currentUserIdIndex = 0;
 let graphQL_reqs = new Counter('graphql_reqs');
 
-export let errors = new Counter('Errors');
-export let successRate = new Rate('Successful Requests');
+export let errors = new Counter('errors');
+export let successRate = new Rate('successRate');
 
 // File opens must be here
-const config: GQLTestConfig = JSON.parse(open(TEST_CONFIG_FILE));
+const config: TestConfig = JSON.parse(open(TEST_CONFIG_FILE));
 if (!config) {
   throw new Error(`Missing ${TEST_CONFIG_FILE}`);
 }
 const test: Test = JSON.parse(open(config.stepsFile));
 LoadTestRails.cleanResults(test.testSteps);
 
-const users = JSON.parse(open(config.usersFile));
-if (!users?.length) {
-  throw new Error('Could not find any users in ./users.json');
-}
-console.log(`Found ${users.length} users`);
+const maxVUs = config.maxUsers;
+const rateToAdd = config.rampRateSeconds;
 
 // Called by k6 to initialize
 export function setup() {
-  const obj = { users, test, config };
+  const obj = { test, config };
   return obj;
 }
 
+export let options = {
+  stages: [
+    { duration: `${maxVUs * rateToAdd}s`, target: maxVUs },
+    { duration: `${config.durationMinutes}m`, target: maxVUs },
+    { duration: '20s', target: 0 },
+  ],
+  vusMax: maxVUs,
+};
 // Called by k6 for each invocation
 export default function(context: any) {
-  const config: GQLTestConfig = context.config;
-  const user: User = context.users[currentUserIdIndex];
+  const config: TestConfig = context.config;
+  const user: User = TestUsers.generateOneTestUser(config.emailDomain); // context.users[iterationIndex];
   const test: Test = context.test;
-  currentUserIdIndex++;
   // Rotate through all users see: https://docs.k6.io/docs/test-life-cycle
-  if (currentUserIdIndex === context.users.length) {
-    currentUserIdIndex = 0;
-  }
   console.log(`user=${JSON.stringify(user)}`);
 
   // For this user, rotate through all steps
@@ -55,6 +56,9 @@ export default function(context: any) {
     http,
     sleep,
     graphQL_reqs,
+    crypto,
+    check,
+    fail,
   });
 }
 
